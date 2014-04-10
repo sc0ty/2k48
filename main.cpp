@@ -105,7 +105,7 @@ void showInfo()
 
 	FMTENT("author:", "Mike 'sc0ty' Szymaniak");
 	FMTENT("email:", "sc0typl[at]gmail.com");
-	FMTENT("webpage:", "http://sc0ty.pl");
+	FMTENT("webpage:", "http://sc0ty.pl\n");
 	
 	FMTPAR("HOW TO PLAY");
 	addstr( "        Use your arrow keys to move the tiles. When two\n"
