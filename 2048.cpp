@@ -140,6 +140,8 @@ void Grid::mkTestGrid()
 
 bool Grid::load(const char* fname)
 {
+	if (fname == NULL) return false;
+
 	FILE* f = fopen(fname, "r");
 	if (f == NULL) return false;
 
@@ -151,6 +153,8 @@ bool Grid::load(const char* fname)
 
 bool Grid::save(const char* fname) const 
 {
+	if (fname == NULL) return false;
+
 	FILE* f = fopen(fname, "w");
 	if (f == NULL) return false;
 

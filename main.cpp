@@ -10,29 +10,61 @@
 #include <cstdlib>
 #include <ctime>
 #include <cstddef>
+#include <cstring>
 
 
-#define SAVE_FILE	"2k48.save"
+#define SAVE_FILE		"2k48.save"
+#define SESSION_DIR		"/tmp/2k48/"	// for deamon saves
 
 
 static Grid grid;
+static char* sessionfname = NULL;
 
 
 static void exitHandler(const char* cause)
 {
 	printf("Exiting, cause: %s\n", cause);
-#ifndef DEAMON
-	grid.save(SAVE_FILE);
+	grid.save(sessionfname);
+#ifdef DEAMON
+	delete [] sessionfname;
 #endif
 }
 
+void stripstr(char* str)
+{
+	char* c = str;
+
+	while (*c != '\0')
+	{
+		if ((*c >= 'a' && *c <= 'z') ||
+			(*c >= 'A' && *c <= 'Z') ||
+			(*c >= '0' && *c <= '9') ||
+			*c == '_' || *c=='-' || *c == '.' || *c == '@');
+		else *c = '_';
+		c++;
+	}
+}
+
+void setSessionFileName(const char* host, const char* user)
+{
+	if (user == NULL || host == NULL) return;
+
+	size_t len = sizeof(SESSION_DIR) + strlen(user) + strlen(host) + 1;
+	sessionfname = new char[len + 1];
+
+	strcpy(sessionfname, SESSION_DIR);
+	strcat(sessionfname, user);
+	strcat(sessionfname, "@");
+	strcat(sessionfname, host);
+	stripstr(sessionfname + sizeof(SESSION_DIR) - 1);
+}
 
 void init(int argc, char *argv[])
 {
 	initIO(&exitHandler);
     srand (time(NULL));
 
-#ifdef LOGON
+#if defined(LOGON) || defined(DEAMON)
 	int opt;
 	char* host = const_cast<char*>("<unknown>");
 	char* user = NULL;
@@ -48,8 +80,13 @@ void init(int argc, char *argv[])
 	else LOG("started from %s", host);
 #endif
 
-}
+#ifdef DEAMON
+	setSessionFileName(host, user);
+#else
+	sessionfname = const_cast<char*>(SAVE_FILE);
+#endif
 
+}
 
 int getArrowKey(Direction* dir)
 {
@@ -245,12 +282,7 @@ int main(int argc, char *argv[])
 	char ch = 0;
 	bool play = true;
 
-#ifdef DEAMON
-	showInfo();
-#else
-	if (!grid.load(SAVE_FILE)) showInfo();
-#endif
-
+	if (!grid.load(sessionfname)) showInfo();
 	if (!grid.canMove()) grid.reset();
 
 	while (true)
