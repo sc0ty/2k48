@@ -27,7 +27,7 @@ static void signalHandler(int signo)
     endwin();
     if (signo == SIGHUP)
 	{
-		LOG("closed by user");
+		LOGS("closed by user");
 		exitHandlerFunc("ended by user");
 	}
 	else

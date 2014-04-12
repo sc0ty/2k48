@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 	}
 
 	endwin();
-	LOG("closed by user");
+	LOGS("closed by user");
 	exitHandler("ended by user");
 	return 0;
 }
