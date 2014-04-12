@@ -8,6 +8,7 @@
 #define __IO_H__
 
 #include <ncurses.h>
+#include <unistd.h>
 #include <cstddef>
 
 
