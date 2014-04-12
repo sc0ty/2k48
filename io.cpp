@@ -24,9 +24,17 @@ static ExitHandler exitHandlerFunc = &exitHandlerStub;
 #ifdef LOGSIG
 static void signalHandler(int signo)
 {
-    LOG("closed with signal %d", signo);
     endwin();
-    exitHandlerFunc("terminated");
+    if (signo == SIGHUP)
+	{
+		LOG("closed by user");
+		exitHandlerFunc("ended by user");
+	}
+	else
+	{
+		LOG("closed with signal %d", signo);
+		exitHandlerFunc("terminated");
+	}
     exit(0);
 }
 #endif
@@ -43,6 +51,7 @@ void initIO(ExitHandler eh)
 	signal(SIGINT,  signalHandler);
 	signal(SIGQUIT, signalHandler);
 	signal(SIGTERM, signalHandler);
+	signal(SIGHUP,  signalHandler);
 #endif
 
 	initscr();
