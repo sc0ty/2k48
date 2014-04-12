@@ -1,17 +1,35 @@
+/*
+ * 2048 main game functions
+ *
+ * Mike Szymaniak, 2014
+ */
+
 #include "io.h"
 #include "2048.h"
+#include "render.h"
 #include <cstdlib>
 #include <ctime>
-#include <unistd.h>
+#include <cstddef>
 
 
 #define SAVE_FILE	"2k48.save"
-#define DELAY		50*1000		// in us
+
+
+static Grid grid;
+
+
+static void exitHandler(const char* cause)
+{
+	printf("Exiting, cause: %s\n", cause);
+#ifndef DEAMON
+	grid.save(SAVE_FILE);
+#endif
+}
 
 
 void init(int argc, char *argv[])
 {
-	initIO();
+	initIO(&exitHandler);
     srand (time(NULL));
 
 #ifdef LOGON
@@ -30,34 +48,23 @@ void init(int argc, char *argv[])
 	else LOG("started from %s", host);
 #endif
 
-	init_pair(1,  COLOR_BLACK,	COLOR_YELLOW);	// 2
-	init_pair(2,  COLOR_BLACK,	COLOR_GREEN);	// 4
-	init_pair(3,  COLOR_BLACK,	COLOR_CYAN);	// 8
-	init_pair(4,  COLOR_BLACK,	COLOR_MAGENTA);	// 16
-	init_pair(5,  COLOR_WHITE,	COLOR_BLUE);	// 32
-	init_pair(6,  COLOR_WHITE,	COLOR_RED); 	// 64
-	init_pair(7,  COLOR_BLACK,	COLOR_WHITE);	// 128
-	init_pair(8,  COLOR_BLACK,	COLOR_YELLOW);	// 256
-	init_pair(9,  COLOR_BLACK,	COLOR_GREEN);	// 512
-	init_pair(10, COLOR_BLACK,	COLOR_CYAN);	// 1024
-	init_pair(11, COLOR_BLACK,	COLOR_MAGENTA);	// 2048
-	init_pair(12, COLOR_WHITE,	COLOR_BLUE);	// 4k
-	init_pair(13, COLOR_WHITE,	COLOR_RED);		// 8k
-	init_pair(14, COLOR_BLACK,	COLOR_WHITE);	// header
-	init_pair(15, COLOR_WHITE,	COLOR_RED); 	// popup
 }
 
 
-int getArrowKey()
+int getArrowKey(Direction* dir)
 {
 	int k = getlowkey();
 	switch (k)
 	{
-		case 'w': return KEY_UP;	break;
-		case 's': return KEY_DOWN;	break;
-		case 'a': return KEY_LEFT;	break;
-		case 'd': return KEY_RIGHT;	break;
-		case 'q': return KEY_EXIT;	break;
+		case KEY_UP:
+		case 'w': *dir = DIR_UP;	break;
+		case KEY_DOWN:
+		case 's': *dir = DIR_DOWN;	break;
+		case KEY_LEFT:
+		case 'a': *dir = DIR_LEFT;	break;
+		case KEY_RIGHT:
+		case 'd': *dir = DIR_RIGHT;	break;
+		default: *dir = DIR_NONE;
 	}
 	return k;
 }
@@ -66,11 +73,11 @@ int getArrowKey()
 void showPopup(const char* msg)
 {
 	addstr("\n\n   ");
-	attron(A_BLINK);
-	attron(COLOR_PAIR(15));
+	blinkon();
+	coloron(15);
 	printw("%s", msg);
-	attroff(COLOR_PAIR(15));
-	attroff(A_BLINK);
+	coloroff(15);
+	blinkoff();
 	refresh();
 	getanykey();
 }
@@ -92,9 +99,9 @@ void showInfo()
 	clear();
 	addstr("\n   ");
 
-	attron(COLOR_PAIR(14));
+	coloron(14);
 	addstr("        2k48  by Mike Szymaniak - informations        ");
-	attroff(COLOR_PAIR(14));
+	coloroff(14);
 
 	addstr("\n\n"
 			"     Terminal version of 2048 game - http://git.io/2048\n"
@@ -137,17 +144,20 @@ int mainMenu()
 	boldon(); \
 	addstr(key); \
 	boldoff(); \
-	addstr(" to " cmd "\n");
+	addstr(" - " cmd "\n");
 
 	clear();
 	addstr("\n   ");
-	attron(COLOR_PAIR(14));
+	coloron(14);
 	addstr(" 2k48  by Mike Szymaniak ");
-	attroff(COLOR_PAIR(14));
+	coloroff(14);
 	addstr("\n\n   Press:\n");
 	MENUENT("C", "continue")
 	MENUENT("N", "new game")
 	MENUENT("I", "show info")
+#ifdef DEBUG
+	MENUENT("T", "test grid");
+#endif
 	MENUENT("Q", "quit")
 	addstr("\n   http://sc0ty.pl");
 	refresh();
@@ -166,15 +176,16 @@ int mainMenu()
 }
 
 
-void game(Grid& grid)
+void game()
 {
 	int key = 0;
+	Direction dir = DIR_NONE;
 	static int info = 5;
 
 	clear();
 	if (!grid.canMove())
 	{
-		grid.show();
+		drawGrid(grid);
 		getanykey();
 		return;
 	}
@@ -185,12 +196,12 @@ void game(Grid& grid)
 	while (true)
 	{
 		rescur();
-		grid.show();
+		drawGrid(grid);
 		if (info-- > 0) printw("\n\n if you have display problems - press R\n");
 
 		if (canwin && grid.getMaxTile() >= 2048)
 		{
-			usleep(DELAY);
+			animDelay();
 			LOG("win with %d moves", grid.getMoves());
 			showPopup("        You win!         ");
 			return;
@@ -198,7 +209,7 @@ void game(Grid& grid)
 		
 		if (!grid.canMove())
 		{
-			usleep(DELAY);
+			animDelay();
 			LOG( "lose with %d moves, score %d", grid.getMoves(), grid.getMaxTile());
 			showPopup("        Game over!       ");
 			return;
@@ -206,21 +217,21 @@ void game(Grid& grid)
 
 		do
 		{
-			key = getArrowKey();
-			if (key == KEY_EXIT) return;
+			key = getArrowKey(&dir);
+			if (key == 'q') return;
 			else if (key == 'r')
 			{
 				bool rp = swRescur();
 				LOG("render mode %d", rp);
 				clear();
-				grid.show();
+				drawGrid(grid);
 				printw("\n\n   Repaint mode %s", rp ? "ON" : "OFF");
 				info = 0;
 			}
 		}
-		while (!grid.shift(key, DELAY));
+		while (!grid.shift(dir, drawGrid));
 
-		usleep(DELAY);
+		animDelay();
 		grid.genBlock();
 		if (info == 0) clear();
 	}
@@ -231,7 +242,6 @@ int main(int argc, char *argv[])
 {
 	init(argc, argv);
 
-    Grid grid;
 	char ch = 0;
 	bool play = true;
 
@@ -245,7 +255,7 @@ int main(int argc, char *argv[])
 
 	while (true)
 	{
-		if (play) game(grid);
+		if (play) game();
 
 		ch = mainMenu();
 
@@ -264,13 +274,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-#ifndef DEAMON
-	grid.save(SAVE_FILE);
-#endif
-
-	LOGS("closed normally");
-
 	endwin();
+	exitHandler("ended by user");
 	return 0;
 }
 

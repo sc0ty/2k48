@@ -1,23 +1,13 @@
+/*
+ * 2048 game engine
+ *
+ * Mike Szymaniak, 2014
+ */
+
 #include "2048.h"
-#include "io.h"
 #include <cstring>
 #include <cstdlib>
-#include <unistd.h>
-
-
-void drawTile(int val)
-{
-	if (val)
-	{
-		int i = 1 << val;
-
-		attron(COLOR_PAIR(val % COLORS_NO + 1));
-		if (i < 100) printw(" %2d ", i);
-		else printw("%4d", i);
-		attroff(COLOR_PAIR(val % COLORS_NO + 1));
-	}
-	else addstr("  . ");
-}
+#include <cstdio>
 
 
 #define tile(p) tiles[p.x][p.y]
@@ -34,27 +24,7 @@ void Grid::reset()
 	moves = 0;
 }
 
-void Grid::show() const
-{
-	addch('\n');
-	for (int y=0; y<WY; ++y)
-	{
-		for (int x=0; x<WX; ++x)
-		{
-			addstr("   ");
-			drawTile( abs( tiles[x][y] ) );
-		}
-		addstr("\n\n\n");
-	}
-	
-	addstr("   ");
-	attron(COLOR_PAIR(14));
-	printw("   2k48      moves: %-4d ", moves);
-	attroff(COLOR_PAIR(14));
-	refresh();
-}
-
-bool Grid::shift(int dir, unsigned showDelay)
+bool Grid::shift(Direction dir, DrawGridHandler drawgr)
 {
 	Pos src, dst;
 	bool cont = true;
@@ -67,22 +37,16 @@ bool Grid::shift(int dir, unsigned showDelay)
 		{
 			switch (dir)
 			{
-				case KEY_UP:    cont |= shiftLineUp(i);    break;
-				case KEY_DOWN:  cont |= shiftLineDown(i);  break;
-				case KEY_LEFT:  cont |= shiftLineLeft(i);  break;
-				case KEY_RIGHT: cont |= shiftLineRight(i); break;
+				case DIR_UP:    cont |= shiftLineUp(i);    break;
+				case DIR_DOWN:  cont |= shiftLineDown(i);  break;
+				case DIR_LEFT:  cont |= shiftLineLeft(i);  break;
+				case DIR_RIGHT: cont |= shiftLineRight(i); break;
 				default: return false;
 			}
 			if (cont && !moved) moves++;
 			moved |= cont;
 		}
-		if (showDelay)
-		{
-			rescur();
-			show();
-			usleep(showDelay);
-			refresh();
-		}
+		if (drawgr) drawgr(*this);
 	}
 	resetTileMoves();
 	return moved;
@@ -120,6 +84,13 @@ bool Grid::genBlock()
 		}
 	}
 	return false;
+}
+
+int Grid::getTile(int x, int y) const
+{
+	if (x < 0 || x >= WX) return -1;
+	if (y < 0 || y >= WY) return -1;
+	return abs(tiles[x][y]);
 }
 
 bool Grid::canMove() const

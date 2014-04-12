@@ -1,8 +1,14 @@
+/*
+ * I/O subsystem based on curses
+ *
+ * Mike Szymaniak, 2014
+ */
+
 #ifndef __IO_H__
 #define __IO_H__
 
 #include <ncurses.h>
-#include <unistd.h>
+#include <cstddef>
 
 
 #ifdef DEAMON
@@ -22,8 +28,11 @@
 
 #endif
 
+// function to call before exit
+typedef void (*ExitHandler)(const char* cause);
 
-void initIO();
+// init and register exit handler function
+void initIO(ExitHandler eh = NULL);
 
 int getkey();
 int getlowkey();
@@ -32,8 +41,12 @@ void getanykey();
 void rescur();
 bool swRescur();
 
+void coloron(int color);
+void coloroff(int color);
 void boldon();
 void boldoff();
+void blinkon();
+void blinkoff();
 
 #endif // __IO_H__
 

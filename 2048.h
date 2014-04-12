@@ -1,15 +1,27 @@
+/*
+ * 2048 game engine
+ *
+ * Mike Szymaniak, 2014
+ */
+
 #ifndef __2048_H__
 #define __2048_H__
 
-#include <cstdio>
+#include <cstddef>
+
 
 #define SIZE 4
 #define WX SIZE
 #define WY SIZE
 
-#define COLORS_NO 14	// number of defined tile colors
+
+class Grid;
+
+// function to be called for rendering animation
+typedef void (*DrawGridHandler)(const Grid& grid);
 
 
+// position in the grid
 struct Pos
 {
 	int x, y;
@@ -26,18 +38,24 @@ struct Pos
 };
 
 
-void drawTile(int val);
+// directions to shift
+enum Direction
+{
+	DIR_NONE, DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT
+};
 
 
+// game engine
 class Grid
 {
 public:
 	Grid();
 	void reset();
 
-	void show() const;
-	bool shift(int dir, unsigned showDelay=0);
+	bool shift(Direction dir, DrawGridHandler drawgr = NULL);
 	bool genBlock();
+
+	int getTile(int x, int y) const;
 
 	bool canMove() const;
 	int getMoves() const;
