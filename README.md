@@ -1,7 +1,6 @@
 # 2k48  
-Terminal version of 2048 game - http://git.io/2048
-
-You can play online: **` telnet 2048.dynu.com `**
+Terminal version of 2048 game - http://git.io/2048  
+You can play online: **` telnet 2048.got-game.org `**
 
  - **author:** Mike 'sc0ty' Szymaniak
  - **email:** sc0typl[at]gmail.com
